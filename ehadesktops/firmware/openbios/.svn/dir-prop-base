@@ -1,0 +1,10 @@
+K 10
+svn:ignore
+V 39
+obj-*
+config.xml
+rules.xml
+.pc
+patches
+
+END

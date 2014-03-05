@@ -1,0 +1,321 @@
+\ See license at end of file
+purpose: Build file for dropin dispatcher  - version for direct ROM startup
+
+command: &builder &this
+build-now
+
+create debug-startup
+
+fload ${BP}/cpu/x86/pc/olpc/via/config.fth	\ Address configuration
+
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+\needs >seg:off          fload ${BP}/cpu/x86/pc/rmtools.fth
+
+h# 20 constant cs16     \ Must agree with GDT in rmstart.fth
+
+fload ${BP}/cpu/x86/mmuparam.fth
+
+\ startmacros.fth defines some assembler macros that make MSR and I/O port
+\  access very easy by hiding the details of register use.
+
+fload ${BP}/cpu/x86/startmacros.fth
+fload ${BP}/cpu/x86/pc/port80.fth
+
+\ DEBUG
+[ifdef] config-to-port80
+also 386-assembler definitions
+: config-wb
+   h# 77 port80  dup wbsplit port80  port80  over port80
+   config-wb
+;
+previous definitions
+[then]
+
+hex
+
+fload ${BP}/cpu/x86/pc/finddi.fth	\ find-dropin and other tools
+
+\ Locations of cacheable areas for cache-as-ram setup
+\ We have to be careful that the instruction-cached area doesn't
+\ collide with the data cache.  The instructions, accessed from
+\ ROM, are recoverable, but the data has no backing store so we
+\ mustn't let it be evicted.
+
+\ With the layout below, we should be okay.  The L2 cache is big
+\ enough to hold I and D ranges.  The dcached range is just below
+\ dropin base and the stack is at the top of that range.  The
+\ instructions that we will execute, and their in-line data tables,
+\ are just above dropin base, so they shouldn't collide with the
+\ stack that is near the top of a 64K range.
+
+h# 8000 constant /dcached  \ Size of VIA DCache
+h# 8000 constant /icached  \ Size of VIA ICache
+dropin-base /dcached - constant dcached-base
+
+h#   10.0000 constant ramtest-start
+h#  100.0000 constant ramtest-end
+
+fload ${BP}/cpu/x86/pc/olpc/via/startmacros.fth  \ Via-oriented startup macros
+
+fload ${BP}/cpu/x86/pc/olpc/via/dramtiming.fth
+fload ${BP}/cpu/x86/pc/mmxdot.fth
+
+start-assembling
+ResetBase to asm-origin   \ Necessary for mmxdot
+
+hex
+
+label my-entry
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+fload ${BP}/cpu/x86/pc/romfind.fth	           \ find-dropin subroutine
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/mmxdotcode.fth              \ Memoryless numeric output
+fload ${BP}/cpu/x86/pc/dot.fth			   \ Numeric output subroutine
+[then]
+
+fload ${BP}/cpu/x86/pc/olpc/via/startusdelay.fth   \ microsecond delay subroutine
+fload ${BP}/cpu/x86/pc/olpc/via/startcfgio.fth     \ masked config write subroutine
+fload ${BP}/cpu/x86/pc/olpc/via/startdraminit.fth  \ DDRinit subroutine
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/olpc/via/startcominit.fth   \ cominit subroutine
+[then]
+
+fload ${BP}/dev/hdaudio/start-cx2058x.fth
+
+label startup
+   h# 10 port80
+
+   2 92 port-wb  \ Enable A20
+   \ External A20GATE is disabled automatically because the internal KBC is on by default (cfg reg 8851 bit 0)
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startcacheasram.fth
+
+\ cache_as_ram_auto.c: amd64_main() 
+
+   01 004f config-wb   \ Enable device 0 multiple functions
+
+   00 8898 config-wb   \ Disable BIOS init timer GP3
+
+   08  00c config-wb   \ Cache line size D0F0
+   20  00d config-wb   \ PCI master latency timer D0F0
+   08  20c config-wb   \ Cache line size D0F2
+
+   \ This needs to be done early so we can test various GPIO bits,
+   \ including SERIAL_EN
+
+\   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
+\   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
+
+\ This is a device ID backdoor to fake out the ID so Ubuntu will install
+\   8879 config-rb  h# 40 # al or  al dx out  \ I don't know what this is, but coreboot does it
+
+   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
+   acpi-io-base wbsplit 0292 config-wb  0293 config-wb  \ ACPI base address for C-states, big-endian
+
+[ifdef] debug-startup
+   cominit #) call
+[then]
+   char + report
+
+   fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
+
+[ifdef] debug-startup
+\   cominit #) call
+[then]
+
+\   char + report
+   long-offsets on
+
+   acpi-io-base 4 + port-rw           \ Get APCI Status register
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if  \ Type 1 is wakeup from S3
+      \ Not wakeup from S3
+      \ This turns an OS reboot into a real cold start - from coreboot
+      h# 380 config-rb  ax ax or  0<>  if          \ C-page shadowing not on yet
+         6 h# cf9 port-wb                          \ Force a full system reset
+         char X report
+         begin  hlt  again
+      then
+      carret report   linefeed report   char F report
+      fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
+   then
+
+   \ This must be done in both the power-up and resume-from-S3 cases,
+   \ since the registers in D17F7 lose state during S3.
+
+    80 8fe5 config-wb  \ Phoenix value
+    80 8f60 config-wb  \ Phoenix value
+\   0385 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from reg 85 to SB Low Top e5
+\   0385 config-rb  ax bx mov  8f60 config-setup  bx ax mov  al dx out  \ Copy Low Top from reg 85 to SB Bank 7 end 60
+      
+\   d# 17 7 devfunc
+\   e6 ff 07 mreg \ Enable Top, High, and Compatible SMM
+\   end-table
+
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startgfxinit.fth
+
+0 [if]  \ Fire up C Forth
+   dcached-base 6 +          0  206 set-msr   \ Dcache base address, write back
+   /dcached negate h# 800 +  f  207 set-msr   \ Dcache size
+   \ This region is for CForth
+   h# ffff.0000 6 +          0  208 set-msr   \ ROM base address
+   /icached negate h# 800 +  f  209 set-msr   \ Icache size
+
+   \ Access ROM to load it into the icache
+   h# ffff.0000 #  esi  mov
+   /icached 4 / #  ecx  mov
+   rep  eax lods
+
+   \ Access "RAM" area to load it into the dcache
+   dcached-base #  esi  mov
+   /dcached 4 / #  ecx  mov
+   rep  eax lods
+
+   \ Put the stack pointer at the top of the dcached area
+   dcached-base /dcached + 4 - #  esp  mov
+   ds ax mov  ax ss mov
+
+   h# ffff.0000 # ax mov  ax jmp
+[then]
+
+0 [if]
+long-offsets on
+acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit - set for 32bit memory width
+
+   mmxcr
+   39 3c4 port-wb  ax ax xor  3c5 port-rb  ax mmxdot  
+   68 3c4 port-wb  ax ax xor  3c5 port-rb  ax mmxdot  
+   6d 3c4 port-wb  ax ax xor  3c5 port-rb  ax mmxdot  
+   6e 3c4 port-wb  ax ax xor  3c5 port-rb  ax mmxdot  
+   6f 3c4 port-wb  ax ax xor  3c5 port-rb  ax mmxdot  mmxcr
+
+   h# 08b0 # ax mov  ax mmxdot  mmxcr
+   h# 08b0 h# 10 mmxcfg-dump
+
+   h# 0200 # ax mov  ax mmxdot  mmxcr
+   h# 0200 h# 100 mmxcfg-dump
+
+   h# 0300 # ax mov  ax mmxdot  mmxcr
+   h# 0300 h# 100 mmxcfg-dump
+
+   h# 00100000 # ax mov  ax mmxdot  mmxcr
+   h# 00100000 to ramtest-start
+   ramtest-start h# 1a00.0000 + to ramtest-end
+   fload ${BP}/cpu/x86/pc/ramtest.fth
+then
+long-offsets off
+[then]
+
+   h# 18 port80
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
+
+   fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/startclkgen.fth    \ Turn off unused clock generator outputs
+   fload ${BP}/cpu/x86/pc/olpc/via/starttherm.fth     \ Enables thermal monitor
+   fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth  \ Turns up clock rate
+
+   \ Do this as late as possible so power well registers aren't locked out by the glitch suppressor
+   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
+
+   \ Cache is now setup normally, backed by memory
+   \ Setup a small stack for subroutine calls
+   h# 10.0000 # esp mov
+
+   h# 19 port80
+
+   init-codec #) call
+
+   h# 1a port80
+
+   long-offsets on
+   acpi-io-base 4 + port-rw           \ Get APCI Status register
+   ax bx mov
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  =  if   \ Wakeup from S3
+      \ Set sleep type field to 0 to prevent looping here if resume fails
+      bx ax mov  h# 1c00 invert # ax and  acpi-io-base 4 + # dx mov  op: ax dx out
+      char r report
+
+      fload ${BP}/cpu/x86/pc/olpc/via/startgfxrestore.fth  \ Display restoration
+
+      acpi-io-base h# 4c + port-rl  h# 400 bitset  ax dx out  \ Set USB power high
+
+      cli
+
+      facs-adr h# 18 + #) ax mov  ax ax or  0<>  if  \ X_Firmware_Waking_Vector
+         ax jmp         \ Jump in 32-bit protected mode
+      then
+
+      \ These fixups are only needed by Windows, and some of them are bad for Linux
+      windows-mode-adr #)  ax  mov  ax ax or  0<>  if
+         fload ${BP}/cpu/x86/pc/olpc/via/startpcirestore.fth  \ SD host controller PCI BARs
+      then
+
+      facs-adr h# c + #) ax mov  ax ax or  0<>  if
+         \ Resume in real mode for ACPI operating systems
+         \ Linear wakeup address is in EAX
+         wake-adr lwsplit drop  cs16 #) far jmp
+      then
+
+      char x report
+   then                                            \ Not a wakeup from S3
+   long-offsets off
+
+   char o report
+   h# 1e port80
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startgtlinit.fth
+
+\ Enable the keyboard controller
+   
+\   8851 config-rb  2 # ax or  ax bx mov
+\   8851 config-setup  bx ax mov  al dx out  \ Enable the keyboard configuration port
+\   e2 2e port-wb   7 2f port-wb
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
+
+   h# 1f port80
+   char r report
+
+   fload ${BP}/cpu/x86/pc/resetend.fth
+end-code
+
+also 386-assembler
+startup  my-entry  put-branch
+previous
+
+end-assembling
+
+writing romreset.di
+asm-base  here over -  0  " reset" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

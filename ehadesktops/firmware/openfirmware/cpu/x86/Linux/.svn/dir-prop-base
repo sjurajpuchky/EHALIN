@@ -1,0 +1,11 @@
+K 10
+svn:ignore
+V 54
+forth
+x86forth
+ppcforth
+*.tag
+armforth.trace
+armforth
+
+END

@@ -1,0 +1,61 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+int main()
+{
+    char buf[20];
+    struct timespec start, stop;
+    unsigned long t;
+
+    unsigned long count = 0;
+    clock_gettime(CLOCK_REALTIME,&start);
+    asm(
+#add:mov.100k
+    );
+    clock_gettime(CLOCK_REALTIME,&stop);
+    t = stop.tv_nsec - start.tv_nsec;
+    printf("mov:%d\\n",t);
+
+    clock_gettime(CLOCK_REALTIME,&start);
+    asm(
+#add:xor.100k
+    );
+    clock_gettime(CLOCK_REALTIME,&stop);
+    t = stop.tv_nsec - start.tv_nsec;
+    printf("xor:%d\\n",t);
+
+    clock_gettime(CLOCK_REALTIME,&start);
+    asm(
+#add:add.100k
+    );
+    clock_gettime(CLOCK_REALTIME,&stop);
+    t = stop.tv_nsec - start.tv_nsec;
+    printf("add:%d\\n",t);
+
+    clock_gettime(CLOCK_REALTIME,&start);
+    asm(
+#add:movl.100k
+    );
+    clock_gettime(CLOCK_REALTIME,&stop);
+    t = stop.tv_nsec - start.tv_nsec;
+    printf("movl:%d\\n",t);
+
+    clock_gettime(CLOCK_REALTIME,&start);
+    asm(
+#add:xorl.100k
+    );
+    clock_gettime(CLOCK_REALTIME,&stop);
+    t = stop.tv_nsec - start.tv_nsec;
+    printf("xorl:%d\\n",t);
+
+    clock_gettime(CLOCK_REALTIME,&start);
+    asm(
+#add:addl.100k
+    );
+    clock_gettime(CLOCK_REALTIME,&stop);
+    t = stop.tv_nsec - start.tv_nsec;
+    printf("addl:%d\\n",t);
+
+}
+

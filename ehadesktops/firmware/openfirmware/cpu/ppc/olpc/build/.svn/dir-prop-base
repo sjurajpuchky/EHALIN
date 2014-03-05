@@ -1,0 +1,10 @@
+K 10
+svn:ignore
+V 49
+*.rom
+ppcforth
+builton.fth
+sourceurl
+inflate.bin
+
+END

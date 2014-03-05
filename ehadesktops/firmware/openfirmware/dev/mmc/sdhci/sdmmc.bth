@@ -1,0 +1,15 @@
+purpose: Load file for SD MultiMedia Card driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing sdmmc.fc
+
+FCode-version2
+fload ${BP}/dev/mmc/sdhci/sdmmc.fth
+fload ${BP}/dev/mmc/sdhci/selftest.fth
+end0
+
+end-tokenizing

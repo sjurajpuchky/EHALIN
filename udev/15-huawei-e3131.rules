@@ -1,0 +1,1 @@
+SUBSYSTEM=="usb", ACTION=="add", SYSFS{idProduct}=="14fe", SYSFS{idVendor}=="12d1", RUN+="/usr/sbin/usb_modeswitch -H -v 12d1 -p 14fe -c /etc/usb_modeswitch.d/12d1\:14fe"

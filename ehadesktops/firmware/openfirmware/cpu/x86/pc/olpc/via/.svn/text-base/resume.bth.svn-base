@@ -1,0 +1,340 @@
+\ See license at end of file
+purpose: Low-level code to handle suspend/resume from RAM
+
+command: &builder &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+\ create debug-startup
+
+hex
+
+\ fload ${BP}/cpu/x86/pc/report.fth		\ Startup reports for debugging
+
+fload ${BP}/cpu/x86/pc/olpc/via/config.fth		\ Configuration defines
+
+fload ${BP}/cpu/x86/startmacros.fth
+fload ${BP}/cpu/x86/pc/port80.fth
+
+\ This code will be copied to RAM at suspend-base
+
+\ create measure-suspend
+
+: resume-progress  ( byte -- )
+   " h# 34 # al mov   al h# 70 # out  ( byte ) # al mov  al h# 71 # out" eval
+;
+
+start-assembling                                \ Turn on the target assembler
+suspend-base to asm-origin   \ This code will be copied to a fixed location
+protected-mode
+
+\ Suspend code - called as a subroutine, with return address on the stack
+\ This assumes that the following code is in an area that is mapped virtual=physical
+\ The assumption is embodied by the fact that paging is turned off on the way
+\ down, while continuing to execute straight-line code.  Also, the BP register
+\ is used as a memory pointer before and after the paging turn-off.
+
+label suspend-entry   \ h# f.0000 - entry point at fixed location, called by OS
+   pusha
+   pushf  cli
+   ds push
+   es push
+   fs push
+   gs push
+   ss push dx pop                 \ SS in dx
+
+   here 5 + dup #) call  di pop   \ Virtual address of EIP in DI
+   ( here ) asm-base - #  di  sub \ Virtual address of suspend-base in DI
+
+   \ Page directory VA in AX
+   ax      si  mov                \ Save PDIR VA
+   0 [si]  cx  mov  forget-msr    \ Save old PDIR entry 0
+   h# 83 # 0 [ax] mov             \ Punch a 4M mapping 0->0 into the page directory
+   cr3 ax mov  ax cr3 mov         \ Invalidate the TLB to activate the mapping
+
+   \ Jump to the physical address of the next instruction, disabling paging
+   here 7 + asm-base - asm-origin + # ax mov  ax jmp
+
+   \ We have to be running from a virtual=physical mapping here, otherwise we
+   \ die on the instruction after paging is turned off.
+   cr0 ax mov  ax bx mov          \ CR0 saved in BX
+   h# 80000000 invert #  ax  and  \ Knock off the Paging enable (PG) bit
+   ax cr0 mov                     \ Now paging is off
+
+   \ Physical addresses from now on
+
+\ suspend-physical
+\ here suspend-entry put-branch
+   resume-data #  bp  mov
+
+\   here 5 + dup #) call  bp pop    \ EIP (virtual) in AX
+\   ( here ) asm-base - suspend-base + #  bp  sub
+\   resume-data # bp add
+
+   sp      0 [bp]  mov     \ SP part of SP:SS full pointer
+   op: dx  4 [bp]  mov     \ SS part of SP:SS full pointer
+
+   h#  6 [bp]  str         \ Task register
+   h#  8 [bp]  sldt        \ Local descriptor table register
+   h#  a [bp]  sidt        \ Interrupt descriptor table register
+   h# 10 [bp]  sgdt        \ Global descriptor table register
+
+               bx  h# 18 [bp]  mov  \ CR0
+   cr3 ax mov  ax  h# 1c [bp]  mov  \ CR3
+   cr4 ax mov  ax  h# 20 [bp]  mov  \ CR4
+               cx  h# 24 [bp]  mov  \ PDIR entry 0
+               si  h# 28 [bp]  mov  \ PDIR VA
+               di  h# 2c [bp]  mov  \ Address offset
+
+   cld
+   h# 38 [bp]  di  lea    \ Save area
+
+[ifdef] measure-suspend
+   rdtsc  eax h# 10 #) mov  edx h# 14 #) mov
+[then]
+
+   \ D12F0 SDIO
+   h# 6010 config-rl  ax stos  \ BAR0
+   h# 6014 config-rl  ax stos  \ BAR1
+   h# 6018 config-rl  ax stos  \ BAR2
+   h# 603c config-rb  al stos  \ IRQ
+   h# 6004 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 6004 config-ww       \ Disable
+
+   \ D15F0 EIDE
+   h# 7810 config-rl  ax stos  \ BAR0
+   h# 7814 config-rl  ax stos  \ BAR1
+   h# 7818 config-rl  ax stos  \ BAR2
+   h# 781c config-rl  ax stos  \ BAR3
+   h# 7820 config-rl  ax stos  \ BAR4
+   h# 783c config-rb  al stos  \ IRQ
+   h# 780d config-rb  al stos  \ Latency timer
+   h# 7804 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 7804 config-ww       \ Disable
+
+   \ D16F0 UHCI 0,1
+   h# 8020 config-rl  ax stos  \ IO Base
+   h# 803c config-rb  al stos  \ IRQ
+   h# 800d config-rb  al stos  \ Latency timer
+   h# 8004 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8004 config-ww       \ Disable
+
+   \ D16F1 UHCI 2,3
+   h# 8120 config-rl  ax stos  \ IO Base
+   h# 813c config-rb  al stos  \ IRQ
+   h# 810d config-rb  al stos  \ Latency timer
+   h# 8104 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8104 config-ww       \ Disable
+
+   \ D16F2 UHCI 4,5
+   h# 8220 config-rl  ax stos  \ IO Base
+   h# 823c config-rb  al stos  \ IRQ
+   h# 820d config-rb  al stos  \ Latency timer
+   h# 8204 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8204 config-ww       \ Disable
+
+   \ D16F4 EHCI
+   h# 8410 config-rl  ax stos  \ BAR
+   h# 843c config-rb  al stos  \ IRQ
+   h# 840d config-rb  al stos  \ Latency timer
+   h# 8404 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8404 config-ww       \ Disable
+
+   \ D17F0 Bus Control and Power Management
+   h# 88d2 config-rb  al stos  \ SMBUS clock divisor
+
+   \ D17F7 South-North Module Interface Control
+   h# 8f0d config-rb  al stos  \ Latency timer
+
+   \ D20F0 HD Audio
+   h# a010 config-rl  ax stos  \ BAR
+   h# a03c config-rb  al stos  \ IRQ
+   h# a00d config-rb  al stos  \ Latency timer
+   h# a004 config-rw  op: ax stos  \ Enables
+   h# 0000 h# a004 config-ww       \ Disable
+
+\ This is where Geode saves msrs
+\ This is where Geode handles the DCON
+\ This is where Geode saves the GPIO setup
+\ This is where Geode saves the display state
+\ This is where Geode saves the PIC state (remember the edge/level registers)
+\ This is where Geode saves the PIT state
+\ This is where Geode saves the SMBUS controller state
+\ This is where Geode saves the MFGPT state
+
+   \ Other state we might want to save:
+   \ ISA DMA Controller
+   \ HDaudio
+   \ Codec
+   \ USB
+
+\ This is where Geode stops the video refresh
+
+[ifdef] measure-suspend
+   di 0 #) mov
+   rdtsc ax h# 18 #) mov  dx h# 1c #) mov
+[then]
+
+   \ The caller chooses the wakeup conditions, so we don't do it here
+   h# ffff h# 420 port-ww   \ Clear all status bits
+
+   h# fe resume-progress
+
+   \ Set the resume address
+label resume-adr-loc
+   h# 0 #  facs-adr h# 18 + #)  mov         \ Value will be patched below
+
+   wbinvd                                 \ Flush the cache
+
+   h# 2400 h# 404 port-ww               \ Go to sleep
+
+   h# 1000000 # cx mov  begin  nop  loopa   \ Spin in this cache line while going down
+
+   \ If the processor didn't really go down, perhaps because a wakeup event was
+   \ already pending, proceed as with a wakeup
+
+   \ Increment the CMOS byte at offset 3f
+   h# 3f # al mov   al h# 70 # out  h# 71 # al in  al inc  al h# 71 # out
+
+\ Resume code
+here asm-base - asm-origin +  resume-adr-loc 6 + !
+
+\ Assumptions:
+\   Processor is in protected mode
+\   Running from a 32-bit identity-mapped code segment
+\   Using physical addresses
+
+   resume-data #  bp  mov
+
+   cld
+
+   h# 20 resume-progress
+
+[ifdef] measure-suspend
+   rdtsc  eax h# 20 #) mov  edx h# 24 #) mov
+[then]
+
+   h# 21 resume-progress
+
+   h# 38 [bp]  si  lea    \ Save area
+
+   \ D12F0 SDIO
+   h# 6010 config-setup  ax lods  ax dx out  \ BAR0
+   h# 6014 config-setup  ax lods  ax dx out  \ BAR1
+   h# 6018 config-setup  ax lods  ax dx out  \ BAR2
+   h# 603c config-setup  al lods  al dx out  \ IRQ
+   h# 6004 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D15F0 EIDE
+   h# 7810 config-setup  ax lods  ax dx out  \ BAR0
+   h# 7814 config-setup  ax lods  ax dx out  \ BAR1
+   h# 7818 config-setup  ax lods  ax dx out  \ BAR2
+   h# 781c config-setup  ax lods  ax dx out  \ BAR3
+   h# 7820 config-setup  ax lods  ax dx out  \ BAR4
+   h# 783c config-setup  al lods  al dx out  \ IRQ
+   h# 780d config-setup  al lods  al dx out  \ Latency timer
+   h# 7804 config-setup  op: ax lods  op: ax dx out  \ Enables
+   h# 0000 h# 7804 config-ww       \ Disable
+
+   \ D16F0 UHCI 0,1
+   h# 8020 config-setup  ax lods  ax dx out  \ IO Base
+   h# 803c config-setup  al lods  al dx out  \ IRQ
+   h# 800d config-setup  al lods  al dx out  \ Latency timer
+   h# 8004 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D16F1 UHCI 2,3
+   h# 8120 config-setup  ax lods  ax dx out  \ IO Base
+   h# 813c config-setup  al lods  al dx out  \ IRQ
+   h# 810d config-setup  al lods  al dx out  \ Latency timer
+   h# 8104 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D16F2 UHCI 4,5
+   h# 8220 config-setup  ax lods  ax dx out  \ IO Base
+   h# 823c config-setup  al lods  al dx out  \ IRQ
+   h# 820d config-setup  al lods  al dx out  \ Latency timer
+   h# 8204 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D16F4 EHCI
+   h# 8410 config-setup  ax lods  ax dx out  \ BAR
+   h# 843c config-setup  al lods  al dx out  \ IRQ
+   h# 840d config-setup  al lods  al dx out  \ Latency timer
+   h# 8404 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D17F0 Bus Control and Power Management
+   h# 88d2 config-setup  al lods  al dx out  \ SMBUS clock divisor
+
+   \ D17F7 South-North Module Interface Control
+   h# 8f0d config-setup  al lods  al dx out  \ Latency timer
+
+   \ D20F0 HD Audio
+   h# a010 config-setup  ax lods  ax dx out  \ BAR
+   h# a03c config-setup  al lods  al dx out  \ IRQ
+   h# a00d config-setup  al lods  al dx out  \ Latency timer
+   h# a004 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
+
+\ Turn on USB power
+
+   h# 2a resume-progress
+
+   \ XXX keyboard init
+   \ DCON fiddling
+   \ USB
+
+[ifdef] measure-suspend
+   rdtsc  eax h# 28 #) mov  edx h# 2c #) mov
+   si 4 #) mov
+[then]
+
+   h# 2c resume-progress
+
+   h# 2c [bp]  di mov               \ VA of suspend-base in di
+   h# 28 [bp]  si mov               \ PDIR VA
+   h# 24 [bp]  cx mov forget-msr    \ PDIR entry 0
+   h# 20 [bp]  ax mov  ax cr4 mov   \ Restore CR4
+   h# 1c [bp]  ax mov  ax cr3 mov   \ Restore CR3
+   h# 18 [bp]  ax mov               \ Get CR0 for a few lines later
+
+   h# 10 [bp]  lgdt        \ Global descriptor table register
+   h#  a [bp]  lidt        \ Interrupt descriptor table register
+   h#  8 [bp]  lldt        \ Local descriptor table register
+   op:  h# ffff #  h# 6 [bp]  test  0<>  if
+\     h#  6 [bp]  ltr      \ Task register
+   then
+
+   ax cr0 mov              \ Paging is back on now (if it ever was on)
+
+   \ Force the paging enable to take place
+   h# eb asm8,  0 asm8,    \ jmp to next location to enable paging
+
+   h# 2d resume-progress
+
+   \ Now jump back to the virtual execution address
+   here asm-base - 8 + # di add  \ The add instruction is 6 bytes, the jmp is 2
+   di jmp
+
+   \ Identity mapping of low memory is still in effect
+   0 [bp]  sp  lss
+
+   cx  0 [si]  mov         \ Restore PDIR entry 0
+   cr3 ax mov  ax cr3 mov  \ Flush TLB
+
+   \ Identity mapping of low memory might not exist now
+
+   gs pop
+
+   fs pop
+   es pop
+   ds pop
+   popf
+   popa
+   ret
+end-code
+
+
+writing resume.di
+suspend-entry here over -  0  " resume"  write-dropin
+ofd @ fclose

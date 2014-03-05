@@ -1,0 +1,191 @@
+purpose: Load file for x86 Forth kernel
+\ See license at end of file
+
+command: &builder &this
+build-now
+
+: defined?  ( "name" -- flag )
+   safe-parse-word  $find  dup  if  nip  else  nip nip  then
+;
+: \+  ( "name" "rest of line" -- )
+    defined?  0=  if   [compile] \  then
+; immediate
+: \-  ( "name" "rest of line" -- )
+    defined?  if  [compile] \  then
+; immediate
+ 
+\ [ifdef] use-postfix-assembler
+\ use-postfix-assembler
+\ ' 386-assembler >link fence a!
+\ [ifdef] big-endian-t
+\ forget 386-assembler
+\ create big-endian-t
+\ [else]
+\ forget 386-assembler
+\ [then]
+\ [then]
+
+\ create omit-files
+
+[ifdef] omit-files
+create dic-file-name  ," kernelnofiles.dic"
+[else]
+[ifdef] big-endian-t
+create dic-file-name  ," kernelbe.dic"
+[else]
+\- rel-t create dic-file-name  ," kernel.dic"
+\+ rel-t create dic-file-name  ," kernelrel.dic"
+[then]
+[then]
+
+: \Tags  [compile] \ ; immediate
+: \NotTags  ;  immediate
+
+  ' noop is include-hook		' noop is include-exit-hook
+\ ' $report-name is include-hook	' noop is include-exit-hook
+
+warning off	\ Turn OFF the warning messages
+
+[ifdef] maketags
+fload ${BP}/forth/lib/tags.fth
+' ("header) is "header
+defer "header-t-hook ' (tags-header) is "header-t-hook
+"" loadkern.fth last-filename "copy
+[then]
+
+: resident ;
+
+\ : \rel-t ( -- ) [compile] \  ; immediate
+\ : \!rel-t ( -- )  ; immediate
+\ : \rel-t ( -- )  ; immediate
+\ : \!rel-t ( -- ) [compile] \  ; immediate
+
+fload ${BP}/forth/kernel/conft32.fth
+fload ${BP}/forth/kernel/meta1.fth
+
+only forth also meta also definitions
+\needs 386-assembler caps @ caps on fload ${BP}/cpu/x86/assem.fth caps !
+
+only forth also meta assembler also meta definitions
+: assembler  ( -- )  386-assembler  ;
+
+only forth also meta also assembler definitions
+fload ${BP}/forth/lib/loclabel.fth
+
+fload ${BP}/forth/kernel/swapmap.fth
+\ : : : lastacf .name cr ;
+fload ${BP}/cpu/x86/target.fth
+fload ${BP}/forth/kernel/forward.fth
+fload ${BP}/cpu/x86/fixvoc.fth
+fload ${BP}/forth/kernel/metacompile.fth
+
+\- rel-t fload ${BP}/cpu/x86/metarel.fth
+
+fload ${BP}/cpu/x86/metainit.fth
+
+" kernel.tag" r/w create-file drop  meta-tag-file !
+
+always-headers
+
+\ Comment out the following line(s) when debugging
+-1  threshold  !	\ Turn OFF ALL debugging messages
+warning-t  off  	\ Turn OFF target warning messages
+
+\ Uncomment the following line(s) for more debug output
+\ show? on  1 granularity !  1 threshold !
+\ warning-t on
+
+fload ${BP}/cpu/x86/kerncode.fth
+
+: \tagvoc ; immediate
+: \nottagvoc [compile] \ ; immediate
+
+fload ${BP}/forth/kernel/uservars.fth
+fload ${BP}/forth/kernel/double.fth
+\ : (d.)  (  d -- adr len )  tuck dabs <# #s rot sign #>  ;
+\ fload ${BP}/forth/kernel/dmuldiv.fth
+
+fload ${BP}/forth/lib/bitops.fth
+[ifdef] omit-files
+defer set-relocation-bit     ' noop is set-relocation-bit
+defer clear-relocation-bits  ' 2drop is clear-relocation-bits
+[else]
+\- rel-t fload ${BP}/cpu/x86/kernrel.fth
+\+ rel-t fload ${BP}/cpu/x86/nullrel.fth
+[then]
+
+fload ${BP}/forth/lib/struct.fth
+
+fload ${BP}/forth/kernel/kernel.fth
+
+[ifdef] omit-files
+fload ${BP}/forth/lib/dumballo.fth
+false value flat?
+: uart-init-io  ( -- )
+   install-uart-io
+;
+' uart-init-io is init-io
+' noop is init-environment
+: stand-init ;
+
+[else]
+fload ${BP}/forth/kernel/sysio.fth
+fload ${BP}/forth/lib/dumballo.fth
+fload ${BP}/cpu/x86/syscall.fth
+[then]
+
+fload ${BP}/forth/kernel/nswapmap.fth
+
+\ fload ${BP}/forth/kernel/nrelmap.fth
+fload ${BP}/cpu/x86/boot.fth
+fload ${BP}/forth/kernel/init.fth
+fload ${BP}/cpu/x86/finish.fth
+
+' (do-literal) is do-literal
+
+meta-tag-file @ fclose  meta-tag-file off
+
+[ifdef] omit-files
+: crcgen drop ;
+: patchboot ;
+fload ${BP}/cpu/x86/pc/saveabs.fth
+[else]
+fload ${BP}/cpu/x86/saveexp.fth
+fload ${BP}/cpu/x86/savemeta.fth
+[then]
+
+warning on	\ Turn ON the warning messages
+
+hex
+
+[ifdef] omit-files
+dic-file-name count  h# ffff.0000 save-abs-rom cr
+[else]
+\Tags close-tag-file
+\NotTags .( --- Saving )  dic-file-name ". .(  ---)
+dic-file-name count $save-meta cr
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

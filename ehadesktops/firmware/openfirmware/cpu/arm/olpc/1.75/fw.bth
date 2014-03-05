@@ -1,0 +1,33 @@
+purpose: Build OFW Forth dictionary for OLPC XO-1.75
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/olpc/1.75/build/prefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" fw.tag" r/w create-file drop  tag-file !
+
+fload ${BP}/cpu/arm/olpc/build-fw.fth
+
+\ The internal SD card shares the host controller circuitry with
+\ the internal eMMC, so you can only use one at a time.  A GPIO
+\ chooses which one to use.  The intended usage is to "repair"
+\ boards with a broken eMMC chip by inserting a microSD and grounding
+\ the GPIO.
+
+: clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
+: boot-dev-sel-gpio#  ( -- n )  clx-touch?  if  2  else  d# 56  then  ;
+
+fload ${BP}/cpu/arm/olpc/1.75/uart.fth
+fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
+fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
+fload ${BP}/cpu/arm/olpc/1.75/usb.fth
+fload ${BP}/cpu/arm/olpc/1.75/switches.fth
+fload ${BP}/cpu/arm/olpc/1.75/leds.fth
+fload ${BP}/cpu/arm/olpc/1.75/testitems.fth
+fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
+fload ${BP}/cpu/arm/olpc/gpio-gamekeys.fth
+fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+fload ${BP}/cpu/arm/olpc/1.75/dtcompat.fth
+
+fload ${BP}/cpu/arm/olpc/save-fw.fth

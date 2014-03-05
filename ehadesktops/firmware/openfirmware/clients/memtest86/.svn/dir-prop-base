@@ -1,0 +1,10 @@
+K 10
+svn:ignore
+V 52
+memtest
+memtest_shared.bin
+memtest_shared
+*.s
+*.bin
+
+END

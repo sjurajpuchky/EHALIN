@@ -1,0 +1,16 @@
+K 10
+svn:ignore
+V 81
+build
+ofw.elf
+builton.fth
+*.rom
+*.bin
+*.version
+forth
+sourceurl
+*.tag
+tags
+*.elf
+
+END

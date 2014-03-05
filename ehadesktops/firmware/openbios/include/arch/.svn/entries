@@ -1,0 +1,52 @@
+10
+
+dir
+1198
+svn://openbios.org/openbios/trunk/openbios-devel/include/arch
+svn://openbios.org/openbios
+
+
+
+2013-07-27T10:14:44.819994Z
+1182
+mcayland
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+f158a5a8-5612-0410-a976-696ce0be7e32
+
+ppc
+dir
+
+sparc64
+dir
+
+ia64
+dir
+
+unix
+dir
+
+x86
+dir
+
+common
+dir
+
+amd64
+dir
+
+sparc32
+dir
+

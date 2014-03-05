@@ -1,0 +1,9 @@
+K 10
+svn:ignore
+V 23
+*.elf
+*.syms
+*.a
+hello
+
+END

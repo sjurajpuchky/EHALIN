@@ -1,0 +1,54 @@
+purpose: Build Open Firmware for Marvell MMP2
+\ See license at end of file
+
+in: sp.img
+in: fw.img
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/marvell/tim.fth
+
+\ Marvel Trusted Image Module image creation script for
+\ MMP2 platform with 512M of Elpida RAM
+\ Running OFW directly, with no intermediate loader
+
+tim: 00030102 0 Sky! PXA688
+flash: NAN'6
+timh:  TIMH        0 d1020000
+\ Skip Marvell's Bad Block Table from 0x1000 to 0x7ffff
+\ Secure Processor code loaded into SRAM
+image: WTMI    80000 d1000000 sp.img
+\ Main Processor code loaded into DRAM
+image: OBMI    84000        0 fw.img
+reserved:
+
+  fload ${BP}/cpu/arm/mmp2/ddr_elpida_512m.fth
+  term:
+end-reserved
+end-tim
+
+save-image: ofw.rom
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

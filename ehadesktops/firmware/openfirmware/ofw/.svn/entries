@@ -1,0 +1,73 @@
+10
+
+dir
+3696
+svn://openfirmware.info/openfirmware/ofw
+svn://openfirmware.info/openfirmware
+
+
+
+2013-05-16T05:00:21.875420Z
+3658
+quozl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1552c027-8020-0410-b4b5-a757f869b4ce
+
+fcode
+dir
+
+gui
+dir
+
+help
+dir
+
+core
+dir
+
+disklabel
+dir
+
+wifi
+dir
+
+confvar
+dir
+
+ppp
+dir
+
+linux
+dir
+
+inet
+dir
+
+elf
+dir
+
+fs
+dir
+
+tokenizer
+dir
+
+inetv6
+dir
+
+termemu
+dir
+

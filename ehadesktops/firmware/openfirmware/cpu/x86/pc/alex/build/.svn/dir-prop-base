@@ -1,0 +1,12 @@
+K 10
+svn:ignore
+V 63
+*.tag
+builton.fth
+*.elf
+build
+tags
+testicons.version
+testicons
+
+END

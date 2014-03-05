@@ -1,0 +1,27 @@
+
+
+			Linux KERNEL changes v. ehal1
+			codename: Panther
+
+Originaly prepared for distribution of linux called Enterprise High Avaiability Linux tuned up by following features in code
+
+
+- kgpu
+- kcluster
+- openmp
+- openmpi
+
+- kjvm 
+   Executation stack for Javabyte code in ELF, a.out, class
+- kphp
+   Executation stack for PHP Bytecode in ELF, a.out, phb
+- klisp
+
+- kpython
+
+- kruby
+
+- kgrid
+
+- knncpu
+

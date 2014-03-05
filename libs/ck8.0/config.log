@@ -1,0 +1,187 @@
+This file contains any messages produced by compilers while
+running configure, to aid debugging if configure makes a mistake.
+
+configure:561: checking for a BSD compatible install
+configure:616: checking for ranlib
+configure:645: checking how to run the C preprocessor
+configure:666: cc -E  conftest.c >/dev/null 2>conftest.out
+configure:728: checking for unistd.h
+configure:738: cc -E  conftest.c >/dev/null 2>conftest.out
+configure:728: checking for limits.h
+configure:738: cc -E  conftest.c >/dev/null 2>conftest.out
+configure:771: checking stdlib.h
+configure:829: checking for ANSI C header files
+configure:842: cc -E  conftest.c >/dev/null 2>conftest.out
+configure:909: cc -o conftest    conftest.c  1>&5
+configure: In function 'main':
+configure:904: warning: incompatible implicit declaration of built-in function 'exit'
+configure:933: checking for mode_t
+configure:966: checking for pid_t
+configure:999: checking for size_t
+configure:1032: checking for uid_t in sys/types.h
+configure:1071: checking return type of signal handlers
+configure:1093: cc -c   conftest.c 1>&5
+configure:1114: checking for sigaction
+configure:1142: cc -o conftest    conftest.c  1>&5
+configure:1229: checking Ck version
+configure:1267: checking fd_set and sys/select
+configure:1276: cc -c   conftest.c 1>&5
+configure:1332: checking ncurses headers
+configure:1343: cc -c  -I/usr/include/ncursesw  conftest.c 1>&5
+configure:1597: checking GPM library
+configure:1608: cc -o conftest    conftest.c -lgpm 1>&5
+configure:1602:17: error: gpm.h: No such file or directory
+configure: In function 'main':
+configure:1604: error: 'Gpm_Connect' undeclared (first use in this function)
+configure:1604: error: (Each undeclared identifier is reported only once
+configure:1604: error: for each function it appears in.)
+configure:1604: error: expected ';' before 'conn'
+configure:1604: error: 'conn' undeclared (first use in this function)
+configure: failed program was:
+#line 1601 "configure"
+#include "confdefs.h"
+#include <gpm.h>
+int main() {
+Gpm_Connect conn; Gpm_Open(&conn, 0);
+; return 0; }
+configure:1644: checking for main in -lXbsd
+configure:1659: cc -o conftest    conftest.c -lXbsd   1>&5
+/usr/bin/ld: cannot find -lXbsd
+collect2: ld returned 1 exit status
+configure: failed program was:
+#line 1652 "configure"
+#include "confdefs.h"
+
+int main() {
+main()
+; return 0; }
+configure:1682: checking for connect
+configure:1710: cc -o conftest    conftest.c  1>&5
+configure:1823: checking for gethostbyname
+configure:1851: cc -o conftest    conftest.c  1>&5
+configure:1912: checking for strncasecmp
+configure:1940: cc -o conftest    conftest.c  1>&5
+configure:1924: warning: conflicting types for built-in function 'strncasecmp'
+configure:2008: checking count field in FILE structures
+configure:2017: cc -c   conftest.c 1>&5
+configure: In function 'main':
+configure:2013: error: 'FILE' has no member named '_cnt'
+configure: failed program was:
+#line 2010 "configure"
+#include "confdefs.h"
+#include <stdio.h>
+int main() {
+FILE *f = stdin; f->_cnt = 0;
+; return 0; }
+configure:2034: cc -c   conftest.c 1>&5
+configure: In function 'main':
+configure:2030: error: 'FILE' has no member named '__cnt'
+configure: failed program was:
+#line 2027 "configure"
+#include "confdefs.h"
+#include <stdio.h>
+int main() {
+FILE *f = stdin; f->__cnt = 0;
+; return 0; }
+configure:2052: cc -c   conftest.c 1>&5
+configure: In function 'main':
+configure:2048: error: 'FILE' has no member named '_r'
+configure: failed program was:
+#line 2045 "configure"
+#include "confdefs.h"
+#include <stdio.h>
+int main() {
+FILE *f = stdin; f->_r = 0;
+; return 0; }
+configure:2070: cc -c   conftest.c 1>&5
+configure: In function 'main':
+configure:2066: error: 'FILE' has no member named 'readCount'
+configure: failed program was:
+#line 2063 "configure"
+#include "confdefs.h"
+#include <stdio.h>
+int main() {
+FILE *f = stdin; f->readCount = 0;
+; return 0; }
+configure:2094: cc -c   conftest.c 1>&5
+configure: In function 'main':
+configure:2090: error: 'FILE' has no member named '_gptr'
+configure:2090: error: 'FILE' has no member named '_egptr'
+configure: failed program was:
+#line 2087 "configure"
+#include "confdefs.h"
+#include <stdio.h>
+int main() {
+FILE *f = stdin; f->_gptr = f->_egptr;
+; return 0; }
+configure:2121: cc -c   conftest.c 1>&5
+configure:2154: checking for sin
+configure:2182: cc -o conftest    conftest.c  1>&5
+configure:2166: warning: conflicting types for built-in function 'sin'
+/tmp/ccf4k2KK.o: In function `main':
+conftest.c:(.text+0xa): undefined reference to `sin'
+collect2: ld returned 1 exit status
+configure: failed program was:
+#line 2159 "configure"
+#include "confdefs.h"
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char sin(); below.  */
+#include <assert.h>
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char sin();
+
+int main() {
+
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_sin) || defined (__stub___sin)
+choke me
+#else
+sin();
+#endif
+
+; return 0; }
+configure:2203: checking for main in -lieee
+configure:2218: cc -o conftest    conftest.c -lieee   1>&5
+configure:2245: checking for memmove
+configure:2273: cc -o conftest    conftest.c  1>&5
+configure:2257: warning: conflicting types for built-in function 'memmove'
+configure:2306: checking for BSDgettimeofday
+configure:2334: cc -o conftest    conftest.c  1>&5
+/tmp/ccDJNg8W.o: In function `main':
+conftest.c:(.text+0xa): undefined reference to `BSDgettimeofday'
+collect2: ld returned 1 exit status
+configure: failed program was:
+#line 2311 "configure"
+#include "confdefs.h"
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char BSDgettimeofday(); below.  */
+#include <assert.h>
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char BSDgettimeofday();
+
+int main() {
+
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_BSDgettimeofday) || defined (__stub___BSDgettimeofday)
+choke me
+#else
+BSDgettimeofday();
+#endif
+
+; return 0; }
+configure:2357: checking for gettimeofday declaration
+configure:2388: checking for strtod
+configure:2416: cc -o conftest    conftest.c  1>&5
+configure:2438: checking for Solaris 2.4 strtod bug
+configure:2458: cc -o conftest    conftest.c  1>&5
+configure: In function 'main':
+configure:2452: warning: incompatible implicit declaration of built-in function 'exit'
+configure:2454: warning: incompatible implicit declaration of built-in function 'exit'

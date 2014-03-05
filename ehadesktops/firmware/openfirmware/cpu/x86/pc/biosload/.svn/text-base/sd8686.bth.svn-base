@@ -1,0 +1,6 @@
+purpose: Fetch the firmware for the Marvell 8686 wireless LAN module
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/x86/pc/olpc/via/sd8686.bth

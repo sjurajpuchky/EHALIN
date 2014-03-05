@@ -1,0 +1,22 @@
+K 10
+svn:ignore
+V 137
+*.txt
+*.public
+*.rom
+*.version
+tags
+sourceurl
+*.tag
+build
+builton.fth
+VIA.ROM
+*.bin
+memtest
+*.aml
+*.stamp
+forth
+testicons
+multicast-nand
+
+END

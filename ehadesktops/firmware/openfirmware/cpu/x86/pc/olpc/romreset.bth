@@ -1,0 +1,131 @@
+\ See license at end of file
+purpose: Build file for dropin dispatcher  - version for direct ROM startup
+
+command: &builder &this
+build-now
+
+create debug-startup
+
+fload ${BP}/cpu/x86/pc/olpc/config.fth	\ Address configuration
+
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+fload ${BP}/cpu/x86/mmuparam.fth
+
+\ startmacros.fth defines some assembler macros that make MSR and I/O port
+\  access very easy by hiding the details of register use.
+
+fload ${BP}/dev/geode/startmacros.fth
+
+hex
+
+fload ${BP}/cpu/x86/pc/finddi.fth	\ find-dropin and other tools
+
+h#  3e.0000 constant inflate-base
+h#  30.0000 constant workspace
+
+: pulse-tp  ( -- )
+   [ also assembler ]
+    1. 4c00.0016 set-msr
+   10. 4c00.000c set-msr
+   20. 4c00.000c set-msr
+   10. 4c00.000c set-msr
+   [ previous ]
+;
+
+
+start-assembling
+
+label my-entry
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+[then]
+
+fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
+
+label startup
+   h# 10 # al mov  al h# 80 # out
+
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 10 #  al mov    al  h# 71 #  out   \ Write value 0x10
+   then
+
+   long-offsets on
+   h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
+
+fload ${BP}/cpu/x86/pc/olpc/lxearly.fth
+
+   else  \ GX branch
+
+fload ${BP}/cpu/x86/pc/olpc/gxearly.fth
+
+   then
+
+   \ char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   h# 12 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 12 #  al mov    al  h# 71 #  out   \ Write value 0x12
+   then
+
+fload ${BP}/dev/geode/draminit.fth
+
+   \ Last-minute check for LX erratum 34 - reset if the DLL didn't start correctly
+   h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
+      h# 4c00000f rmsr  h# 7ff bitclr  h# 4 bitset  h# 4c00000f wmsr  \ Set DLL_OV
+      h# 4c00000f rmsr  h# 7ff # ax and  h# 104 # ax cmp  =  if       \ Check the result
+         \ The value 104 indicates that the DLL did not start, so we must reset
+         1. 5140.0017 set-msr
+      then
+   then
+
+   \ Now we can use the stack and do conventional subroutine calls
+
+   h# 1f # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 1f #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
+   fload ${BP}/cpu/x86/pc/resetend.fth
+end-code
+
+also 386-assembler
+startup  my-entry  put-branch
+previous
+
+end-assembling
+
+writing romreset.di
+asm-base  here over -  0  " reset" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

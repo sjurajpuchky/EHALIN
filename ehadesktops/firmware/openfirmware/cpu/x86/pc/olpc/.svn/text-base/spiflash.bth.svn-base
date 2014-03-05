@@ -1,0 +1,83 @@
+purpose: Builder script for making the SPI FLASH serial recovery program
+
+command: &builder &this
+build-now
+
+\needs cdump : cdump  ( adr len -- )  push-hex   bounds  ?do  i c@  3 u.r  loop  pop-base  ;
+
+\needs null$  : null$  " "  ;
+
+h# fff0.0000 constant rom-pa
+
+fload ${BP}/cpu/x86/pc/olpc/linuxserial.fth
+fload ${BP}/cpu/x86/ioports.fth    \ I/O port access under Linux
+
+alias root-map-in mmap     ( phys len -- virt )
+alias root-map-out munmap  ( virt len -- )
+
+fload ${BP}/cpu/x86/crc32.fth		\ Assembly language Zip CRC calculation
+fload ${BP}/forth/lib/crc32.fth		\ High-level portion of CRC calculation
+fload ${BP}/forth/lib/wrtime.fth	\ Time delays via the wrapper
+
+: power-off  ( -- )  " sync" $sh  " kbc-on" eval  ;
+
+hex
+fload ${BP}/dev/olpc/kb3700/ecspi.fth
+fload ${BP}/dev/olpc/spiflash/spiflash.fth
+fload ${BP}/dev/olpc/kb3700/ecio.fth
+
+: linux-io-spi-start  ( -- )
+   io-spi-start
+   h# fff0.0000 h# 10.0000 mmap to flash-base
+;
+: use-linux-io  ( -- )  ['] linux-io-spi-start to spi-start  ;
+
+fload ${BP}/dev/olpc/kb3700/ecserial.fth
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth
+fload ${BP}/dev/olpc/spiflash/spiui.fth
+fload ${BP}/dev/olpc/spiflash/flashec.fth
+
+: os-fw-filename$  ( -- adr len )  " olpc.rom"  ;
+
+0 [if]
+\ This doesn't work but I'm leaving it in for future experimentation
+: read-a-lot  ( adr len -- actual )
+   swap serial-fd  d# 20 syscall  3drop retval .
+;
+: fast-read  ( -- )
+   setup-spi-read
+   \ Slam out the requests and hope the EC can keep up
+   d# 256 0 do  0 spi-out 3 uemit  loop
+
+   here d# 256 read-a-lot
+   spi-cs-off
+;
+[then]
+
+: usage  ( -- )
+   ." SPI FLASH recovery program version 2.2." cr
+   ." Complete instructions at http://wiki.laptop.org/go/SPI_FLASH_Recovery" cr
+   ." Command summary:" cr
+   cr
+   ." line /dev/ttySn    \ Set the serial port to device" cr
+   ."    If you omit this command, the default port is /dev/ttyS0" cr
+   cr
+   ." flash filename     \ Programs the FLASH from the named file
+   cr
+   ." verify             \ Verifies the FLASH" cr
+   cr
+   ." Verification over the serial line is slow (17 minutes)" cr
+   ." so you might want to skip it and let the" cr
+   ." loaded image verify itself upon booting." cr
+   ."
+   cr
+   ." flash-ec filename  \ Programs the EC FLASH from the named file
+
+   cr
+;
+
+' usage to title
+
+alias quit bye
+
+" spiflash.dic" $save-forth

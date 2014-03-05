@@ -1,0 +1,81 @@
+#!/usr/bin/wish
+
+
+proc paintResults {name c cl width height xrate yrate offx offy off2x} {
+ set filename "$name.result"
+ set infile [open $filename]
+ set indata [read $infile]
+ close $infile
+ set oldy 0
+ set oldx 0
+ set newy 0
+ set newx 0
+ set count 0
+ foreach point $indata {
+    if {$count == 0} {
+       set oldx [expr $off2x + [expr [lindex [split $point ,] 0] / $xrate]]
+       set oldy [expr $height - [expr [lindex [split $point ,] 1] / $yrate]]
+       incr count
+    }
+    if {$count > 0} {
+       set newx [expr $off2x + [expr [lindex [split $point ,] 0] / $xrate]]
+       set newy [expr $height - [expr [lindex [split $point ,] 1] / $yrate]]
+       $c create line $oldx $oldy $newx $newy -fill $cl
+       set oldx $newx
+       set oldy $newy
+       incr count
+    }
+ }
+ set filename "$name.avg"
+ set infile [open $filename]
+ set indata [read $infile]
+ close $infile
+
+ set count 0
+ foreach avg $indata {
+ set y [expr $avg / $yrate]
+ set lt "AVG $name: $avg ns"
+ $c create line 0 [expr $height - $y] $width [expr $height - $y] -fill $cl
+ $c create text $offx $offy -text $lt -fill $cl
+ }
+}
+
+proc paintGrid {name sname c offx by width height cl} {
+ $c create text [expr $offx * 2] [expr $height - $by + 20] -text "$name" -fill $cl
+ $c create line [expr $offx * 2] $by [expr $offx * 2] [expr $height - $by] -fill $cl
+ $c create text [expr $width - 40] [expr $height - 25] -text "$sname" -fill $cl
+ for { set y 0 } { $y < $height } { incr y $by } {
+  $c create line [expr $offx * 2] [expr $height - $y] $width [expr $height - $y] -fill $cl
+  $c create text $offx [expr $height - [expr $y + [expr $by / 2]]] -text $y -fill $cl
+ }
+ for { set x $by } { $x < $width } { incr x $by } {
+  $c create line [expr $x] $by [expr $x] [expr $height - $by ] -fill $cl
+  $c create text [expr $x + 20] [expr $height - $by + 10] -text $x -fill $cl
+ }
+}
+
+proc c2ph { c } {
+    catch {image create photo -format window -data $c} p
+    return $p
+}
+
+ set width 1050
+ set height 800
+ set xrate 1
+ set yrate 1000
+ set lmargin 40
+ set outputfile [lindex $argv 0]
+ wm title . "Results of Experiment"
+ #wm geometry ""
+ canvas .c -width $width -height $height -background white
+ paintGrid "$yrate ns\n100k" "Samples" .c 20 100 $width $height black
+ paintResults "add" .c red $width $height $xrate $yrate 150 25 $lmargin
+ paintResults "addl" .c pink $width $height $xrate $yrate 150 50 $lmargin
+ paintResults "mov" .c blue $width $height $xrate $yrate 350 25 $lmargin
+ paintResults "movl" .c lightblue $width $height $xrate $yrate 350 50 $lmargin
+ paintResults "xor" .c green $width $height $xrate $yrate 550 25 $lmargin
+ paintResults "xorl" .c lightgreen $width $height $xrate $yrate 550 50 $lmargin
+ .c postscript -width $width -height $height -x 0 -y 0 -file "$outputfile"
+ pack .c
+ 
+

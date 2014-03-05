@@ -1,0 +1,7 @@
+*.public
+multicast-nand/
+build
+dsdt.stamp
+sourceurl
+testicons/
+memtest

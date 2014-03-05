@@ -1,0 +1,80 @@
+purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing sdhcixo.fc
+
+FCode-version2
+fload ${BP}/dev/mmc/sdhci/pciregs.fth
+fload ${BP}/dev/mmc/sdhci/sdhci.fth
+fload ${BP}/dev/mmc/sdhci/mv8686/quirk.fth
+init
+
+: populate-children  ( -- )
+   " board-revision" evaluate    ( boardrev )
+
+   dup h# d10 <  if  \ A1 and A2
+      drop
+      new-device
+         2 encode-int " reg" property
+         " sdmmc" " $load-driver" eval drop
+      finish-device
+
+      new-device
+         1 encode-int " reg" property
+         " mv8686" " $load-driver" eval drop
+      finish-device
+      exit
+   then
+
+   dup h# d28 >=  if  \ B3 and greater
+      drop
+
+      new-device
+         1 encode-int " reg" property
+         " sdmmc" " $load-driver" eval drop
+         " external" " slot-name" string-property
+      finish-device
+
+      new-device
+         2 encode-int " reg" property
+         " mv8686" " $load-driver" eval drop
+      finish-device
+
+      new-device
+         3 encode-int " reg" property
+         " sdmmc" " $load-driver" eval drop
+         " internal" " slot-name" string-property
+      finish-device
+      exit
+   then
+
+   \ B1,B2
+   drop
+
+   new-device
+      1 encode-int " reg" property
+      " sdmmc" " $load-driver" eval drop
+      " internal" " slot-name" string-property
+   finish-device
+
+   new-device
+      2 encode-int " reg" property
+      " sdmmc" " $load-driver" eval drop
+      " external" " slot-name" string-property
+   finish-device
+
+   new-device
+      3 encode-int " reg" property
+      " mv8686" " $load-driver" eval drop
+   finish-device
+;
+
+populate-children
+
+end0
+
+end-tokenizing

@@ -1,0 +1,9 @@
+##
+## This rules are for the new version of udev( >= udevinfo, version 098 ) 
+## The command to check the version is : udevinfo -V
+##
+###################################################################################
+
+SUBSYSTEMS=="usb", ENV{MODALIAS}=="usb:v12D1*ipFF", ENV{MODALIAS}="option"
+SUBSYSTEMS=="usb", ENV{MODALIAS}=="usb:v12D1*ip50", ENV{MODALIAS}="usb-storage"
+SUBSYSTEMS=="usb", ENV{MODALIAS}=="usb:v12D1*ic02isc06ipFF", ENV{MODALIAS}="hw_cdc_driver"

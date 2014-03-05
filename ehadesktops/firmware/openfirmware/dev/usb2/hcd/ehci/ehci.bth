@@ -1,0 +1,17 @@
+purpose: Load file for EHCI HCD
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing ehci.fc
+
+FCode-version2
+
+fload ${BP}/dev/usb2/hcd/ehci/pci.fth
+fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
+
+end0
+
+end-tokenizing

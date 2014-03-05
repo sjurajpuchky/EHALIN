@@ -1,0 +1,123 @@
+10
+
+dir
+1198
+svn://openbios.org/openbios/trunk/openbios-devel/forth
+svn://openbios.org/openbios
+
+
+
+2013-07-27T13:17:49.572273Z
+1198
+mcayland
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+f158a5a8-5612-0410-a976-696ce0be7e32
+
+device
+dir
+
+Kconfig
+file
+
+
+
+
+2013-08-01T06:39:48.000000Z
+c47550ef9b0d0216fe5a9db613f6a7a5
+2006-04-26T15:08:19.584634Z
+1
+stepan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+71
+
+system
+dir
+
+lib
+dir
+
+admin
+dir
+
+testsuite
+dir
+
+debugging
+dir
+
+bootstrap
+dir
+
+util
+dir
+
+packages
+dir
+
+build.xml
+file
+
+
+
+
+2013-08-01T06:39:48.000000Z
+5ae4b6dd7caa37f64c704cb3ba0f85ff
+2008-12-13T09:26:41.073751Z
+285
+blueswirl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+374
+

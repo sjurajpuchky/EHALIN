@@ -1,0 +1,24 @@
+K 10
+svn:ignore
+V 150
+build
+ofw.elf
+builton.fth
+*.rom
+*.bin
+*.version
+forth
+sourceurl
+*.md5
+*.public
+*.stamp
+*.aml
+*.dsl
+multicast-nand
+users
+tags
+fw.tag
+memtest
+testicons
+
+END

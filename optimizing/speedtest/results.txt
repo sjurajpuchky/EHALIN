@@ -1,0 +1,8 @@
+[root@localhost speedtest]# ./prepare-data.sh
+Samples 1000/1000
+AVG addl 282683 with 1000 samples
+AVG add 285049 with 1000 samples
+AVG movl 481690 with 1000 samples
+AVG mov 516908 with 1000 samples
+AVG xorl 191918 with 1000 samples
+AVG xor 195621 with 1000 samples

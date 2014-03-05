@@ -1,0 +1,21 @@
+purpose: Load file for Intel HDAudio interface
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing hdaudio.fc
+
+FCode-version2
+fload ${BP}/dev/hdaudio/core.fth
+fload ${BP}/dev/hdaudio/conexant.fth
+fload ${BP}/dev/hdaudio/audio.fth
+fload ${BP}/dev/hdaudio/extra.fth
+fload ${BP}/forth/lib/isin.fth
+fload ${BP}/forth/lib/tones.fth
+fload ${BP}/dev/geode/ac97/selftest.fth
+fload ${BP}/dev/hdaudio/test.fth
+end0
+
+end-tokenizing

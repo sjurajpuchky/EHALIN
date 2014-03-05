@@ -1,0 +1,11 @@
+K 10
+svn:ignore
+V 57
+*.rom
+build
+builton.fth
+*.bin
+libertas.version
+*.version
+
+END
